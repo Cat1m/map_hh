@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_osm_plugin/flutter_osm_plugin.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
   runApp(const MyApp());
@@ -29,6 +31,21 @@ class MyHomePage extends StatefulWidget {
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
+}
+
+//todo: sử dụng nominatim
+Future<String> getAddressFromNominatim(
+    double latitude, double longitude) async {
+  final url = Uri.parse(
+      'https://nominatim.openstreetmap.org/reverse?format=json&lat=$latitude&lon=$longitude');
+  final response = await http.get(url);
+
+  if (response.statusCode == 200) {
+    var data = jsonDecode(response.body);
+    return data['display_name'];
+  } else {
+    throw Exception('Failed to load location data');
+  }
 }
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -115,11 +132,21 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void goToHisHongHung() async {
     GeoPoint hongHungCenter =
-        GeoPoint(latitude: 11.29075, longitude: 106.11957);
+        GeoPoint(latitude: 11.28999, longitude: 106.11920); //11.29294,106.12451
     controller.changeLocation(hongHungCenter);
     await Future.delayed(const Duration(milliseconds: 2000));
     controller.setZoom(zoomLevel: 18);
 
+    //sử dụng Nominatim
+    try {
+      String address = await getAddressFromNominatim(
+          hongHungCenter.latitude, hongHungCenter.longitude);
+      print("Nominatim API: Địa chỉ: $address");
+    } catch (e) {
+      print("Lỗi khi lấy địa chỉ từ Nominatim API: $e");
+    }
+
+    //sử dụng geocoding
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(
         hongHungCenter.latitude,
